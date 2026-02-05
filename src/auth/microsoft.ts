@@ -1,4 +1,4 @@
-import { PublicClientApplication, type AuthenticationResult, type AccountInfo } from "@azure/msal-browser";
+import { PublicClientApplication } from "@azure/msal-browser";
 import type { AuthSession } from "./types";
 
 function mustEnv(name: string): string {
