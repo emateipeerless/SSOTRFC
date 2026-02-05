@@ -1,14 +1,8 @@
-import React from "react";
 import { NavLink, Outlet, useParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import Sidebar from "../pages/Sidebar";
 
-// Placeholder device list (later you’ll pull from API/Dynamo)
-const mockDevices = [
-  { id: "PUMP-001", name: "Pump 001" },
-  { id: "PUMP-002", name: "Pump 002" },
-  { id: "PUMP-003", name: "Pump 003" },
-];
+
 
 export default function AppShell() {
   const { session, signOut } = useAuth();
