@@ -5,6 +5,7 @@ import { loadSession, saveSession } from "./authStore";
 import { msalInit, loginMicrosoftRedirect, logoutMicrosoft, tryGetMicrosoftSession } from "./microsoft";
 import { loginGoogle, logoutGoogle } from "./google";
 import { localLogin, localLogout, localSignUp, localConfirm, tryGetLocalSession } from "./cognitoLocal";
+import { syncMe } from "../api/syncMe";
 
 type AuthApi = {
   session: AuthSession | null;
@@ -32,11 +33,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await msalInit();
 
         const ms = tryGetMicrosoftSession();
-        if (ms) { setSession(ms); saveSession(ms); return; }
+        if (ms) { setSession(ms); saveSession(ms);await syncMe(ms); return; }
 
         // Prefer Cognito local restore, then Microsoft restore
         const local = await tryGetLocalSession();
-        if (local) { setSession(local); saveSession(local); return; }
+        if (local) { setSession(local); saveSession(local);await syncMe(local); return; }
 
 
         setSession(null);
@@ -57,12 +58,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     signInGoogle: async () => {
       const s = await loginGoogle();
-      setSession(s); saveSession(s);
+      setSession(s); saveSession(s); 
+      await syncMe(s);
     },
 
     signInLocal: async (email, password) => {
       const s = await localLogin(email, password);
       setSession(s); saveSession(s);
+      await syncMe(s);
     },
 
     signUpLocal: async (email, password) => {
