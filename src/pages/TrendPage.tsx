@@ -359,8 +359,8 @@ export default function DeviceTrendsPage(props: { deviceId: string }) {
             autosize: true,
             height: 420,
             margin: { l: 55, r: 20, t: 10, b: 45 },
-            xaxis: { title: "Time", type: "date" },
-            yaxis: { title: "Value" },
+            xaxis: { title: {text:"Time"}, type: "date" },
+            yaxis: { title: {text:"Value" }},
             legend: { orientation: "h" },
           }}
           config={{
@@ -395,8 +395,8 @@ export default function DeviceTrendsPage(props: { deviceId: string }) {
             autosize: true,
             height: 360,
             margin: { l: 55, r: 20, t: 10, b: 45 },
-            xaxis: { title: "Time", type: "date" },
-            yaxis: { title: "RMS" },
+            xaxis: { title: {text: "Time"}, type: "date" },
+            yaxis: { title:{text: "RMS" }},
             legend: { orientation: "h" },
           }}
           config={{

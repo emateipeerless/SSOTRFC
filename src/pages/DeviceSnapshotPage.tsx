@@ -1,6 +1,6 @@
 // src/pages/DeviceSnapshotPage.tsx
 import { getBearerToken } from "../auth/getBearerToken";
-import React, { useEffect, useMemo, useState,useRef } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../auth/AuthContext";
 
 
