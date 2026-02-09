@@ -5,7 +5,12 @@ import AuthCallback from "./pages/AuthCallback";
 import RequireAuth from "./auth/RequireAuth";
 import AppShell from "./layouts/AppShell";
 import Dashboard from "./pages/Dashboard";
-import DevicePage from "./pages/DevicePage";
+import DevicePage from "./pages/DeviceSnapshotPage";
+import DeviceSnapshotRoute from "./routes/DeviceSnapshotRoute";
+import DeviceTrendsPage from "./pages/TrendPage";
+import DeviceTrendsRoute from "./routes/DeviceTrendsRoute";
+import DeviceEventRoute from "./routes/DeviceEventRoute";
+import DeviceSettingsRoute from "./routes/DeviceSettingsRoute";
 
 export default function App() {
   return (
@@ -23,10 +28,10 @@ export default function App() {
       >
         <Route index element={<Dashboard />} />
 
-        <Route path="device/:deviceId" element={<DevicePage />} />
-        <Route path="device/:deviceId/trends" element={<div>Trends (placeholder)</div>} />
-        <Route path="device/:deviceId/events" element={<div>Events (placeholder)</div>} />
-        <Route path="device/:deviceId/settings" element={<div>Settings (placeholder)</div>} />
+        <Route path="device/:deviceId" element={<DeviceSnapshotRoute />} />
+        <Route path="device/:deviceId/trends" element={<DeviceTrendsRoute/>} />
+        <Route path="device/:deviceId/events" element={<DeviceEventRoute/>} />
+        <Route path="device/:deviceId/settings" element={<DeviceSettingsRoute/>} />
       </Route>
 
       <Route path="/" element={<Navigate to="/app" replace />} />
