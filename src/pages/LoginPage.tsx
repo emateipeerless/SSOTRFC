@@ -3,7 +3,7 @@ import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 
 export default function LoginPage() {
-  const { session, loading, signInMicrosoft, signInLocal, signUpLocal, confirmLocal } = useAuth();
+  const { session, loading, signInMicrosoft, signInLocal } = useAuth();
 
   // If already authed → go to app
   if (!loading && session) return <Navigate to="/app" replace />;
@@ -14,8 +14,6 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
-  const [code, setCode] = useState("");
-  const [needsConfirm, setNeedsConfirm] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
   return (
