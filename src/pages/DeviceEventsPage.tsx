@@ -179,7 +179,7 @@ export default function DeviceEventsPage(props: { deviceId: string }) {
                     className="eventRow"
                   >
                     {/* Event numbering now corresponds to newest-first order */}
-                    <div className="eventIdx">Event {idx + 1}</div>
+                    <div className="eventIdx">Test {idx + 1}</div>
                     <div className="muted">{formatDuration(ev.runDurationSeconds)}</div>
                     <div className="muted">{formatStartTimeLocal(ev.startTimestamp)}</div>
                   </div>
