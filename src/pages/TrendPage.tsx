@@ -1,12 +1,5 @@
 // src/pages/DeviceTrendsPage.tsx
-// Two Plotly time-series charts:
-// 1) RMS trend
-// 2) Analog inputs AN1–AN4 trend
-//
-// Assumes you already have auth session + getBearerToken(session) like your Sidebar.
-//
-// Dependencies:
-// npm i plotly.js react-plotly.js
+// DROP-IN replacement with theme-reactive Plotly charts.
 
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../auth/AuthContext";
@@ -18,14 +11,14 @@ import Plot from "react-plotly.js";
  * ============================ */
 export interface RmsRow {
   deviceId: string;
-  timestamp: string; // ISO string recommended
+  timestamp: string;
   rms: number;
 }
 
 export interface AnalogRow {
   deviceId: string;
-  timestamp: string; // ISO string recommended
-  an1: number; // amps
+  timestamp: string;
+  an1: number;
   an2: number;
   an3: number;
   an4: number;
@@ -37,7 +30,6 @@ type DateRangePreset = "24h" | "7d" | "30d" | "custom";
  * Config
  * ============================ */
 const API_BASE_URL = import.meta.env.VITE_API_BASE;
-
 
 /* ============================
  * Helpers
@@ -62,9 +54,9 @@ function parseIsoSafe(s: string) {
  * ============================ */
 async function fetchJsonWithAuth(url: string, session: any): Promise<any> {
   if (!API_BASE_URL)
-    throw new Error("Missing API base URL (VITE_API_BASE_URL / REACT_APP_API_BASE_URL).");
+    throw new Error("Missing API base URL.");
 
-  if (!session) throw new Error("No session available (not authenticated).");
+  if (!session) throw new Error("No session available.");
 
   const token = await getBearerToken(session);
   if (!token) throw new Error("Failed to resolve bearer token.");
@@ -80,7 +72,7 @@ async function fetchJsonWithAuth(url: string, session: any): Promise<any> {
 
   return res.json();
 }
-//${encodeURIComponent(deviceId)} use this for PROTO when multiple devices
+
 async function fetchRmsSeries(
   deviceId: string,
   fromIso: string,
@@ -100,7 +92,7 @@ async function fetchRmsSeries(
     rms: Number(x.rms ?? x.RMS),
   }));
 }
-//same hardcoded device id below can use snippet from comment above when ready
+
 async function fetchAnalogSeries(
   deviceId: string,
   fromIso: string,
@@ -125,23 +117,73 @@ async function fetchAnalogSeries(
 }
 
 /* ============================
+ * CSS variable helper
+ * ============================ */
+const css = (v: string) =>
+  getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+const makePlotLayout = (base: any = {}) => ({
+  ...base,
+  paper_bgcolor: css("--surface"),
+  plot_bgcolor: css("--surface-2"),
+  font: { color: css("--text") },
+
+  xaxis: {
+    ...(base.xaxis || {}),
+    gridcolor: css("--border"),
+    zerolinecolor: css("--border"),
+    color: css("--text"),
+    title: {
+      ...(base.xaxis?.title || {}),
+      font: { color: css("--text") },
+    },
+  },
+
+  yaxis: {
+    ...(base.yaxis || {}),
+    gridcolor: css("--border"),
+    zerolinecolor: css("--border"),
+    color: css("--text"),
+    title: {
+      ...(base.yaxis?.title || {}),
+      font: { color: css("--text") },
+    },
+  },
+
+  legend: {
+    ...(base.legend || {}),
+    font: { color: css("--text") },
+  },
+});
+
+/* ============================
  * Page Component
  * ============================ */
 export default function DeviceTrendsPage(props: { deviceId: string }) {
   const { deviceId } = props;
   const { session } = useAuth();
 
-  // Range controls
+  /* ----- THEME REACTIVE RE-RENDER KEY ----- */
+  const [themeKey, setThemeKey] = useState(
+    document.documentElement.dataset.theme || "light"
+  );
+
+  useEffect(() => {
+    const el = document.documentElement;
+
+    const obs = new MutationObserver(() => {
+      setThemeKey(el.dataset.theme || "light");
+    });
+
+    obs.observe(el, { attributes: true, attributeFilter: ["data-theme"] });
+
+    return () => obs.disconnect();
+  }, []);
+
+  /* ----- Time Range State ----- */
   const [preset, setPreset] = useState<DateRangePreset>("7d");
-  const [customFrom, setCustomFrom] = useState<string>("");
-  const [customTo, setCustomTo] = useState<string>("");
-
-  // Data
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const [rmsRows, setRmsRows] = useState<RmsRow[]>([]);
-  const [analogRows, setAnalogRows] = useState<AnalogRow[]>([]);
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
 
   const { fromIso, toIso } = useMemo(() => {
     const now = new Date();
@@ -156,9 +198,14 @@ export default function DeviceTrendsPage(props: { deviceId: string }) {
     return { fromIso: f, toIso: t };
   }, [preset, customFrom, customTo]);
 
+  /* ----- Data Fetching ----- */
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [rmsRows, setRmsRows] = useState<RmsRow[]>([]);
+  const [analogRows, setAnalogRows] = useState<AnalogRow[]>([]);
+
   async function load() {
     if (!session) return;
-
     setLoading(true);
     setError(null);
 
@@ -188,7 +235,7 @@ export default function DeviceTrendsPage(props: { deviceId: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, deviceId, fromIso, toIso]);
 
-  // RMS plot
+  /* ----- Traces ----- */
   const rmsTrace = useMemo(() => {
     return {
       type: "scatter" as const,
@@ -200,34 +247,33 @@ export default function DeviceTrendsPage(props: { deviceId: string }) {
     };
   }, [rmsRows]);
 
-  // Analog plot
   const analogTraces = useMemo(() => {
     const x = analogRows.map((r) => r.timestamp);
     return [
       {
         type: "scatter" as const,
-        mode: "lines" as const,
+        mode: "lines",
         name: "AN1",
         x,
         y: analogRows.map((r) => r.an1),
       },
       {
-        type: "scatter" as const,
-        mode: "lines" as const,
+        type: "scatter",
+        mode: "lines",
         name: "AN2",
         x,
         y: analogRows.map((r) => r.an2),
       },
       {
-        type: "scatter" as const,
-        mode: "lines" as const,
+        type: "scatter",
+        mode: "lines",
         name: "AN3",
         x,
         y: analogRows.map((r) => r.an3),
       },
       {
-        type: "scatter" as const,
-        mode: "lines" as const,
+        type: "scatter",
+        mode: "lines",
         name: "AN4",
         x,
         y: analogRows.map((r) => r.an4),
@@ -235,36 +281,21 @@ export default function DeviceTrendsPage(props: { deviceId: string }) {
     ];
   }, [analogRows]);
 
+  /* ============================
+   * Render
+   * ============================ */
   return (
-    <div style={{ padding: 20, maxWidth: 1300, margin: "0 auto" }}>
+    <div className="page">
       {/* Header */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "baseline",
-          justifyContent: "space-between",
-          gap: 12,
-        }}
-      >
+      <div className="pageHeader">
         <div>
-          <h2 style={{ margin: 0 }}>Device Trends</h2>
-          <div style={{ opacity: 0.75, marginTop: 6 }}>
+          <h2 className="pageTitle">Device Trends</h2>
+          <div className="pageSub">
             Device: <b>{deviceId}</b>
           </div>
         </div>
 
-        <button
-          onClick={load}
-          disabled={loading || !session}
-          style={{
-            borderRadius: 10,
-            padding: "10px 12px",
-            border: "1px solid rgba(255,255,255,0.18)",
-            background: "transparent",
-            color: "inherit",
-            cursor: "pointer",
-          }}
-        >
+        <button onClick={load} disabled={loading || !session} className="btn btnPrimary">
           {loading ? "Loading..." : "Refresh"}
         </button>
       </div>
@@ -272,19 +303,13 @@ export default function DeviceTrendsPage(props: { deviceId: string }) {
       <div style={{ height: 14 }} />
 
       {/* Range Controls */}
-      <div
-        style={{
-          display: "flex",
-          gap: 12,
-          flexWrap: "wrap",
-          alignItems: "center",
-        }}
-      >
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
         <label>
           Range:&nbsp;
           <select
             value={preset}
             onChange={(e) => setPreset(e.target.value as DateRangePreset)}
+            className="select"
           >
             <option value="24h">Last 24 hours</option>
             <option value="7d">Last 7 days</option>
@@ -301,6 +326,7 @@ export default function DeviceTrendsPage(props: { deviceId: string }) {
                 value={customFrom}
                 onChange={(e) => setCustomFrom(e.target.value)}
                 placeholder="2026-02-01T00:00:00Z"
+                className="input"
                 style={{ width: 220 }}
               />
             </label>
@@ -311,13 +337,14 @@ export default function DeviceTrendsPage(props: { deviceId: string }) {
                 value={customTo}
                 onChange={(e) => setCustomTo(e.target.value)}
                 placeholder="2026-02-09T23:59:59Z"
+                className="input"
                 style={{ width: 220 }}
               />
             </label>
           </>
         )}
 
-        <div style={{ opacity: 0.7, fontSize: 12 }}>
+        <div className="muted2" style={{ fontSize: 12 }}>
           Query: <span>{fromIso}</span> → <span>{toIso}</span>
         </div>
       </div>
@@ -326,92 +353,76 @@ export default function DeviceTrendsPage(props: { deviceId: string }) {
 
       {/* Error */}
       {error && (
-        <div
-          style={{
-            padding: 14,
-            borderRadius: 12,
-            border: "1px solid rgba(255,0,0,0.35)",
-          }}
-        >
-          <div style={{ fontWeight: 700, marginBottom: 6 }}>Error</div>
-          <div style={{ opacity: 0.85 }}>{error}</div>
+        <div className="inlineError">
+          <div style={{ fontWeight: 900, marginBottom: 6 }}>Error</div>
+          <div className="muted">{error}</div>
         </div>
       )}
 
       <div style={{ height: 14 }} />
 
       {/* Analog Graph */}
-      <div
-        style={{
-          border: "1px solid rgba(255,255,255,0.12)",
-          borderRadius: 12,
-          padding: 12,
-          background: "rgba(255,255,255,0.04)",
-        }}
-      >
-        <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>
-          Analog Inputs (Time Series)
+      <div className="card cardSoft">
+        <div className="cardInner">
+          <div style={{ fontSize: 14, fontWeight: 900, marginBottom: 8 }}>
+            Analog Inputs (Time Series)
+          </div>
+
+          <Plot
+            key={themeKey}
+            data={analogTraces as any}
+            layout={makePlotLayout({
+              autosize: true,
+              height: 420,
+              margin: { l: 55, r: 20, t: 10, b: 45 },
+              xaxis: { title: { text: "Time" }, type: "date" },
+              yaxis: { title: { text: "Value" } },
+              legend: { orientation: "h" },
+            })}
+            config={{
+              displaylogo: false,
+              responsive: true,
+              modeBarButtonsToRemove: ["select2d", "lasso2d"],
+            }}
+            style={{ width: "100%" }}
+          />
+
+          <div className="muted2" style={{ fontSize: 12 }}>
+            Source: Analog table (DeviceID, Timestamp, AN1, AN2, AN3, AN4)
+          </div>
+
+          {/* RMS Graph */}
+          <div className="card" style={{ marginTop: 14 }}>
+            <div className="cardInner">
+              <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>
+                RMS (Vibration Sensor mm/s^2)
+              </div>
+
+              <Plot
+                key={themeKey + "-rms"}
+                data={[rmsTrace]}
+                layout={makePlotLayout({
+                  autosize: true,
+                  height: 360,
+                  margin: { l: 55, r: 20, t: 10, b: 45 },
+                  xaxis: { title: { text: "Time" }, type: "date" },
+                  yaxis: { title: { text: "RMS" } },
+                  legend: { orientation: "h" },
+                })}
+                config={{
+                  displaylogo: false,
+                  responsive: true,
+                  modeBarButtonsToRemove: ["select2d", "lasso2d"],
+                }}
+                style={{ width: "100%" }}
+              />
+
+              <div className="muted2" style={{ fontSize: 12 }}>
+                Source: RMS table (DeviceID, timestamp, RMS)
+              </div>
+            </div>
+          </div>
         </div>
-
-        <Plot
-          data={analogTraces as any}
-          layout={{
-            autosize: true,
-            height: 420,
-            margin: { l: 55, r: 20, t: 10, b: 45 },
-            xaxis: { title: {text:"Time"}, type: "date" },
-            yaxis: { title: {text:"Value" }},
-            legend: { orientation: "h" },
-          }}
-          config={{
-            displaylogo: false,
-            responsive: true,
-            modeBarButtonsToRemove: ["select2d", "lasso2d"],
-          }}
-          style={{ width: "100%" }}
-        />
-
-        <div style={{ fontSize: 12, opacity: 0.7 }}>
-          Source: Analog table (DeviceID, Timestamp, AN1, AN2, AN3, AN4)
-        </div>
-
-              {/* RMS Graph */}
-      <div
-        style={{
-          border: "1px solid rgba(255,255,255,0.12)",
-          borderRadius: 12,
-          padding: 12,
-          background: "rgba(255,255,255,0.04)",
-          marginBottom: 14,
-        }}
-      >
-        <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>
-          RMS (Vibration Sensor mm/s^2)
-        </div>
-
-        <Plot
-          data={[rmsTrace]}
-          layout={{
-            autosize: true,
-            height: 360,
-            margin: { l: 55, r: 20, t: 10, b: 45 },
-            xaxis: { title: {text: "Time"}, type: "date" },
-            yaxis: { title:{text: "RMS" }},
-            legend: { orientation: "h" },
-          }}
-          config={{
-            displaylogo: false,
-            responsive: true,
-            modeBarButtonsToRemove: ["select2d", "lasso2d"],
-          }}
-          style={{ width: "100%" }}
-        />
-
-        <div style={{ fontSize: 12, opacity: 0.7 }}>
-          Source: RMS table (DeviceID, timestamp, RMS)
-        </div>
-      </div>
-
       </div>
     </div>
   );

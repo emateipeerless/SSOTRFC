@@ -3,15 +3,14 @@ import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 
 export default function LoginPage() {
-  const { session, loading, signInMicrosoft, signInGoogle, signInLocal, signUpLocal, confirmLocal } = useAuth();
+  const { session, loading, signInMicrosoft, signInLocal, signUpLocal, confirmLocal } = useAuth();
 
-  // ✅ if already authed, never sit on /login
+  // If already authed → go to app
   if (!loading && session) return <Navigate to="/app" replace />;
 
   const nav = useNavigate();
   const loc = useLocation() as any;
   const returnTo = loc.state?.from ?? "/app";
-
 
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
@@ -20,75 +19,145 @@ export default function LoginPage() {
   const [msg, setMsg] = useState<string | null>(null);
 
   return (
-    <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 24, fontFamily: "system-ui" }}>
-      <div style={{ width: 420, border: "1px solid #e5e5e5", borderRadius: 14, padding: 18 }}>
-        <h2 style={{ marginTop: 0 }}>Single Sign On</h2>
+    <div className="authWrap">
 
-        <button style={{ width: "100%", padding: 10, marginBottom: 8 }}
-          onClick={async () => await signInMicrosoft()}>
-          Continue with Microsoft
-        </button>
+      {/* ---- APP LOGO ---- */}
 
-        <button style={{ width: "100%", padding: 10, marginBottom: 16 }}
-          onClick={async () => {
-            setMsg(null);
-            try { await signInGoogle(); nav(returnTo, { replace: true }); }
-            catch (e) { setMsg(e instanceof Error ? e.message : "Google sign-in failed (likely not configured yet)."); }
-          }}>
-          Continue with Google
-        </button>
 
-        <div style={{ borderTop: "1px solid #eee", paddingTop: 14 }}>
-          <div style={{ fontWeight: 700, marginBottom: 8 }}>TurfConnect Login</div>
 
-          <input style={{ width: "100%", padding: 10, marginBottom: 8 }}
-            placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
 
-          <input style={{ width: "100%", padding: 10, marginBottom: 8 }}
-            placeholder="Password" type="password" value={pw} onChange={(e) => setPw(e.target.value)} />
-
-          <button style={{ width: "100%", padding: 10, marginBottom: 8 }}
-            onClick={async () => {
-              setMsg(null);
-              try { await signInLocal(email, pw); nav(returnTo, { replace: true }); }
-              catch (e) { setMsg(e instanceof Error ? e.message : "Local sign-in failed"); }
-            }}>
-            Sign in
-          </button>
-
-          <button style={{ width: "100%", padding: 10, marginBottom: 8 }}
-            onClick={async () => {
-              setMsg(null);
-              try {
-                const step = await signUpLocal(email, pw);
-                if (step === "CONFIRM_REQUIRED") { setNeedsConfirm(true); setMsg("Check email for confirmation code."); }
-                else setMsg("Account created. You can sign in now.");
-              } catch (e) {
-                setMsg(e instanceof Error ? e.message : "Sign-up failed");
-              }
-            }}>
-            Create account
-          </button>
-
-          {needsConfirm && (
-            <>
-              <input style={{ width: "100%", padding: 10, marginBottom: 8 }}
-                placeholder="Confirmation code" value={code} onChange={(e) => setCode(e.target.value)} />
-
-              <button style={{ width: "100%", padding: 10 }}
-                onClick={async () => {
-                  setMsg(null);
-                  try { await confirmLocal(email, code); setNeedsConfirm(false); setMsg("Confirmed. Sign in now."); }
-                  catch (e) { setMsg(e instanceof Error ? e.message : "Confirm failed"); }
-                }}>
-                Confirm account
-              </button>
-            </>
-          )}
-
-          {msg && <div style={{ marginTop: 10, color: "#b00020" }}>{msg}</div>}
+      <div className="card authCard">
+        <div className="cardInner">
+        <div className="logoWrap">
+          <img
+          src={
+            document.documentElement.dataset.theme === "dark"
+              ? "/logoD.png"
+              : "/logoG.png"
+          }
+          alt="TurfConnect Logo"
+          className="logoL"
+        />
         </div>
-      </div>
+
+          <div className="divider" />
+
+          {/* ---- EMAIL/PASSWORD FLOW ---- */}
+          <div className="stack">
+            <div style={{ fontWeight: 900 }}>Login With Email</div>
+
+            <input
+              className="input"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+
+            <input
+              className="input"
+              placeholder="Password"
+              type="password"
+              value={pw}
+              onChange={(e) => setPw(e.target.value)}
+            />
+
+            <button
+              className="btn btnPrimaryL"
+              onClick={async () => {
+                setMsg(null);
+                try {
+                  await signInLocal(email, pw);
+                  nav(returnTo, { replace: true });
+                } catch (e) {
+                  setMsg(e instanceof Error ? e.message : "Local sign-in failed");
+                }
+              }}
+            >
+              Sign in
+            </button>
+{/*
+            <button
+              className="btn"
+              onClick={async () => {
+                setMsg(null);
+                try {
+                  const step = await signUpLocal(email, pw);
+                  if (step === "CONFIRM_REQUIRED") {
+                    setNeedsConfirm(true);
+                    setMsg("Check email for confirmation code.");
+                  } else setMsg("Account created. You can sign in now.");
+                } catch (e) {
+                  setMsg(e instanceof Error ? e.message : "Sign-up failed");
+                }
+              }}
+            >
+              Create account
+            </button>
+
+            {needsConfirm && (
+              <>
+                <input
+                  className="input"
+                  placeholder="Confirmation code"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                />
+
+                <button
+                  className="btn btnPrimary"
+                  onClick={async () => {
+                    setMsg(null);
+                    try {
+                      await confirmLocal(email, code);
+                      setNeedsConfirm(false);
+                      setMsg("Confirmed. Sign in now.");
+                    } catch (e) {
+                      setMsg(e instanceof Error ? e.message : "Confirm failed");
+                    }
+                  }}
+                >
+                  Confirm account
+                </button>
+              </>
+            )}
+*/}
+            {msg && <div className="inlineError">{msg}</div>}
+          </div>
+        </div>
+        </div>
+        <h3 className="ssolabel">SSO Sign In</h3>
+        <div className="dividerD">
+         {/* ---- SSO BUTTON ---- */}
+          <div className="authActions">
+
+          <button
+            className="btn btnPrimary"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              justifyContent: "center",
+              fontWeight: 600
+            }}
+            onClick={async () => await signInMicrosoft()}
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 23 23"
+              xmlns="http://www.w3.org/2000/svg"
+              style={{ display: "block" }}
+            >
+              <rect width="10" height="10" x="0" y="0" fill="#F25022" />
+              <rect width="10" height="10" x="12" y="0" fill="#7FBA00" />
+              <rect width="10" height="10" x="0" y="12" fill="#00A4EF" />
+              <rect width="10" height="10" x="12" y="12" fill="#FFB900" />
+            </svg>
+            Login with Microsoft
+          </button>
+
+          </div>
+            </div>
     </div>
   );
 }

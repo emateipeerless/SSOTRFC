@@ -1,53 +1,114 @@
+import { useEffect, useMemo, useState } from "react";
 import { NavLink, Outlet, useParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import Sidebar from "../pages/Sidebar";
 
+type ThemeMode = "light" | "dark";
 
+function getInitialTheme(): ThemeMode {
+  const stored = (localStorage.getItem("ui.theme") || "").toLowerCase();
+  if (stored === "dark" || stored === "light") return stored;
+  // Default to system preference
+  return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
 
 export default function AppShell() {
   const { session, signOut } = useAuth();
   const params = useParams();
 
-  return (
-    <div style={{ height: "100vh", display: "grid", gridTemplateRows: "56px 1fr" }}>
-      {/* Topbar */}
-      <header style={{
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "0 16px", borderBottom: "1px solid #ddd"
-      }}>
-        <div style={{ fontWeight: 800 }}>TurfConnect V0.1</div>
+  const [theme, setTheme] = useState<ThemeMode>(() => getInitialTheme());
 
-        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-          <span style={{ opacity: 0.8 }}>
-            {session?.name ?? `${session?.provider}:${session?.userId}`}
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem("ui.theme", theme);
+  }, [theme]);
+
+  const userLabel = useMemo(
+    () => session?.name ?? `${session?.provider}:${session?.userId}`,
+    [session?.name, session?.provider, session?.userId]
+  );
+
+  return (
+    <div className="shell">
+      {/* Topbar */}
+      <header className="topbar">
+      <div className="brand">
+        <img
+          src={theme === "dark" ? "/logoD.png" : "/logoD.png"}
+          alt="TurfConnect Logo"
+          className="brandLogo"
+        />
+        <span className="badge">V0.1</span>
+      </div>
+
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <button
+            className="btn btn--ghostL"
+            onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
+            aria-label="Toggle theme"
+            title="Toggle theme"
+          >
+            {theme === "dark" ? "Light" : "Dark"}
+          </button>
+
+          <span style={{ maxWidth: 320, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "var(--mutedlab)" }}>
+            {userLabel}
           </span>
-          <button onClick={() => void signOut()}>Sign out</button>
+
+          <button className="btn" onClick={() => void signOut()}>
+            Sign out
+          </button>
         </div>
       </header>
 
       {/* Body */}
-      <div style={{ display: "grid", gridTemplateColumns: "260px 1fr", minHeight: 0 }}>
+      <div className="shellBody">
         {/* Sidebar */}
-        <aside style={{ borderRight: "1px solid #ddd", padding: 12, overflow: "auto" }}>
-          <div style={{ fontWeight: 700, marginBottom: 8 }}>Sites</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <Sidebar/>
+        <aside className="sidebar">
+          <div className="sidebarInner">
+            <div className="sidebarTitle">Sites</div>
+            <Sidebar />
           </div>
         </aside>
 
         {/* Main */}
-        <main style={{ padding: 16, overflow: "auto" }}>
-          {/* Simple nav buttons for “pages of each device” */}
+        <main className="main">
+          {/* Secondary nav (device pages) — below header, aligned to the right of sidebar */}
           {params.deviceId && (
-            <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-              <NavLink to={`/app/device/${params.deviceId}`} end>Overview</NavLink>
-              <NavLink to={`/app/device/${params.deviceId}/trends`}>Trends</NavLink>
-              <NavLink to={`/app/device/${params.deviceId}/events`}>Events</NavLink>
-              <NavLink to={`/app/device/${params.deviceId}/settings`}>Settings</NavLink>
+            <div className="mainSubbar">
+              <nav className="deviceTabs" aria-label="Device navigation">
+                <NavLink
+                  to={`/app/device/${params.deviceId}`}
+                  end
+                  className={({ isActive }) => `tabLink ${isActive ? "tabLinkActive" : ""}`}
+                >
+                  Overview
+                </NavLink>
+                <NavLink
+                  to={`/app/device/${params.deviceId}/trends`}
+                  className={({ isActive }) => `tabLink ${isActive ? "tabLinkActive" : ""}`}
+                >
+                  Trends
+                </NavLink>
+                <NavLink
+                  to={`/app/device/${params.deviceId}/events`}
+                  className={({ isActive }) => `tabLink ${isActive ? "tabLinkActive" : ""}`}
+                >
+                  Events
+                </NavLink>
+                <NavLink
+                  to={`/app/device/${params.deviceId}/settings`}
+                  className={({ isActive }) => `tabLink ${isActive ? "tabLinkActive" : ""}`}
+                >
+                  Settings
+                </NavLink>
+              </nav>
             </div>
           )}
 
-          <Outlet />
+          <div className="mainInner">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>

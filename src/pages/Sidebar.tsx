@@ -191,58 +191,57 @@ export default function Sidebar() {
   // -----------------------
   // UI
   // -----------------------
-  if (loadingSites) return <div>Loading sites...</div>;
+  if (loadingSites) return <div className="muted">Loading sites...</div>;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+    <div className="tree">
       {sites.map((s) => {
         const isOpen = openSites.has(s.siteId);
         const devices = devicesBySite[s.siteId];
 
         return (
-          <div key={s.siteId} style={{ paddingBottom: 8, borderBottom: "1px solid #eee" }}>
+          <div key={s.siteId}>
             {/* Site title row */}
             <button
               onClick={() => toggleSite(s.siteId)}
-              style={{
-                width: "100%",
-                textAlign: "left",
-                padding: "6px 8px",
-                fontSize: 15,
-                fontWeight: 600,
-                background: "transparent",
-                border: "none",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-              }}
+              className="siteRow"
             >
               <span
-                style={{
-                  transform: isOpen ? "rotate(90deg)" : "rotate(0deg)",
-                  transition: "0.15s",
-                  display: "inline-block",
-                }}
+                className={`chev ${isOpen ? "chevOpen" : ""}`}
               >
-                ▶
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M9 6L15 12L9 18"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
               </span>
-              {s.siteName ?? s.siteId}
+              <span className="siteName">{s.siteName ?? s.siteId}</span>
             </button>
 
             {/* Devices section */}
             {isOpen && (
-              <div style={{ paddingLeft: 20, paddingTop: 4, display: "flex", flexDirection: "column", gap: 4 }}>
+              <div className="deviceList">
                 {/* Loading state */}
-                {loadingSiteDevices[s.siteId] && <div style={{ color: "#888" }}>Loading devices...</div>}
+                {loadingSiteDevices[s.siteId] && <div className="muted">Loading devices...</div>}
 
                 {/* Error state */}
                 {errorsBySite[s.siteId] && (
-                  <div style={{ color: "#c00" }}>
+                  <div className="inlineError">
                     {errorsBySite[s.siteId]}{" "}
                     <button
                       onClick={() => fetchSiteDevicesOnDemand(s.siteId)}
-                      style={{ marginLeft: 8, cursor: "pointer", border: "1px solid #ccc", borderRadius: 4, padding: "2px 6px" }}
+                      className="btn"
                     >
                       Retry
                     </button>
@@ -255,20 +254,16 @@ export default function Sidebar() {
                     <NavLink
                       key={d.deviceId}
                       to={`/app/device/${d.deviceId}`}
-                      style={({ isActive }) => ({
-                        padding: "6px 8px",
-                        borderRadius: 6,
-                        textDecoration: "none",
-                        background: isActive ? "rgba(0,90,255,0.12)" : "transparent",
-                        color: isActive ? "#0044ff" : "#333",
-                      })}
+                      className={({ isActive }) =>
+                        `deviceLink ${isActive ? "deviceLinkActive" : ""}`
+                      }
                     >
                       {d.deviceId}
                     </NavLink>
                   ))}
 
                 {/* No devices */}
-                {devices && devices.length === 0 && <div style={{ color: "#888" }}>No devices</div>}
+                {devices && devices.length === 0 && <div className="muted">No devices</div>}
               </div>
             )}
           </div>

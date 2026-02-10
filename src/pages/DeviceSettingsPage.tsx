@@ -55,17 +55,9 @@ async function fetchDeviceSettings(
 
 function FieldRow(props: { label: string; value?: React.ReactNode }) {
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "180px 1fr",
-        gap: 10,
-        padding: "10px 0",
-        borderTop: "1px solid rgba(255,255,255,0.10)",
-      }}
-    >
-      <div style={{ opacity: 0.75 }}>{props.label}</div>
-      <div style={{ fontWeight: 700 }}>{props.value ?? "—"}</div>
+    <div className="kv">
+      <div className="kvLabel">{props.label}</div>
+      <div className="kvValue">{props.value ?? "—"}</div>
     </div>
   );
 }
@@ -101,18 +93,11 @@ export default function DeviceSettingsPage(props: { deviceId: string }) {
   }, [session, deviceId]);
 
   return (
-    <div style={{ padding: 20, maxWidth: 900, margin: "0 auto" }}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "baseline",
-          gap: 12,
-        }}
-      >
+    <div className="page page--narrow">
+      <div className="pageHeader">
         <div>
-          <h2 style={{ margin: 0 }}>Device Settings</h2>
-          <div style={{ opacity: 0.75, marginTop: 6 }}>
+          <h2 className="pageTitle">Device Settings</h2>
+          <div className="pageSub">
             Device: <b>{deviceId}</b>
           </div>
         </div>
@@ -120,14 +105,7 @@ export default function DeviceSettingsPage(props: { deviceId: string }) {
         <button
           onClick={load}
           disabled={loading || !session}
-          style={{
-            borderRadius: 10,
-            padding: "10px 12px",
-            border: "1px solid rgba(255,255,255,0.18)",
-            background: "transparent",
-            color: "inherit",
-            cursor: "pointer",
-          }}
+          className="btn btnPrimary"
         >
           {loading ? "Loading..." : "Refresh"}
         </button>
@@ -136,49 +114,28 @@ export default function DeviceSettingsPage(props: { deviceId: string }) {
       <div style={{ height: 14 }} />
 
       {error ? (
-        <div
-          style={{
-            padding: 14,
-            borderRadius: 12,
-            border: "1px solid rgba(255,0,0,0.35)",
-          }}
-        >
-          <div style={{ fontWeight: 700, marginBottom: 6 }}>Error</div>
-          <div style={{ opacity: 0.85 }}>{error}</div>
+        <div className="inlineError">
+          <div style={{ fontWeight: 900, marginBottom: 6 }}>Error</div>
+          <div className="muted">{error}</div>
         </div>
       ) : null}
 
       <div style={{ height: 14 }} />
 
       {!settings && !loading ? (
-        <div
-          style={{
-            border: "1px solid rgba(255,255,255,0.12)",
-            borderRadius: 12,
-            padding: 12,
-            background: "rgba(255,255,255,0.04)",
-            opacity: 0.85,
-          }}
-        >
-          No settings found for this device.
-        </div>
+        <div className="card"><div className="cardInner muted">No settings found for this device.</div></div>
       ) : null}
 
       {settings ? (
-        <div
-          style={{
-            border: "1px solid rgba(255,255,255,0.12)",
-            borderRadius: 12,
-            padding: 12,
-            background: "rgba(255,255,255,0.04)",
-          }}
-        >
-          <div style={{ fontWeight: 800, marginBottom: 6 }}>Info</div>
+        <div className="card cardSoft">
+          <div className="cardInner">
+          <div style={{ fontWeight: 900, marginBottom: 6 }}>Info</div>
 
           <FieldRow label="Device ID" value={settings.deviceId} />
           <FieldRow label="Device Name" value={settings.deviceName ?? "—"} />
           <FieldRow label="Firmware (FW)" value={settings.FW ?? "—"} />
           <FieldRow label="Description" value={settings.description ?? "—"} />
+          </div>
         </div>
       ) : null}
     </div>

@@ -121,19 +121,14 @@ return `${secs}s`;
 * UI blocks (minimal styling; you’ll overhaul later)
 * ============
 */
-function StatCard(props: { title: string; value: React.ReactNode; sub?: React.ReactNode }) {
+function StatCard(props: { title: string; value: React.ReactNode; sub?: React.ReactNode; className?: string }) {
 return (
-<div
-style={{
-border: "1px solid rgba(255,255,255,0.12)",
-borderRadius: 12,
-padding: 16,
-background: "rgba(255,255,255,0.04)",
-}}
->
-<div style={{ fontSize: 13, opacity: 0.8, marginBottom: 8 }}>{props.title}</div>
-<div style={{ fontSize: 28, fontWeight: 700, lineHeight: 1.1 }}>{props.value}</div>
-{props.sub ? <div style={{ marginTop: 8, fontSize: 12, opacity: 0.7 }}>{props.sub}</div> : null}
+<div className={`card statCard ${props.className ?? ""}`.trim()}>
+  <div className="cardInner">
+    <div className="statTitle">{props.title}</div>
+    <div className="statValue">{props.value}</div>
+    {props.sub ? <div className="statSub">{props.sub}</div> : null}
+  </div>
 </div>
 );
 }
@@ -143,46 +138,34 @@ const safe = props.data ?? [];
 const max = Math.max(1, ...safe.map((d) => d.runs));
 
 return (
-<div
-style={{
-border: "1px solid rgba(255,255,255,0.12)",
-borderRadius: 12,
-padding: 16,
-background: "rgba(255,255,255,0.04)",
-}}
->
-<div style={{ fontSize: 14, fontWeight: 700, marginBottom: 10 }}>Runs per day (past 7 days)</div>
+<div className="card">
+  <div className="cardInner">
+    <div style={{ fontSize: 14, fontWeight: 900, marginBottom: 10 }}>Runs per day (past 7 days)</div>
 
-<div style={{ display: "flex", alignItems: "flex-end", gap: 10, height: 140 }}>
+    <div className="chartBars">
 {safe.map((p) => {
 const hPct = (p.runs / max) * 100;
 return (
-<div key={p.day} style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
-<div style={{ fontSize: 12, opacity: 0.8, textAlign: "center" }}>{p.runs}</div>
-
-<div
-title={`${p.day}: ${p.runs} runs`}
-style={{
-height: `${hPct}%`,
-minHeight: p.runs > 0 ? 6 : 2,
-borderRadius: 8,
-border: "1px solid rgba(255,255,255,0.18)",
-background: "rgba(255,255,255,0.10)",
-width: "100%",
-}}
-/>
-
-<div style={{ fontSize: 11, opacity: 0.7, textAlign: "center" }}>
-{p.day.slice(5)} {/* MM-DD */}
-</div>
+<div key={p.day} className="barCol">
+  <div className="barVal">{p.runs}</div>
+  <div
+    className="bar"
+    title={`${p.day}: ${p.runs} runs`}
+    style={{
+      height: `${hPct}%`,
+      minHeight: p.runs > 0 ? 8 : 3,
+    }}
+  />
+  <div className="barLabel">{p.day.slice(5)}</div>
 </div>
 );
 })}
-</div>
+    </div>
 
-<div style={{ fontSize: 12, opacity: 0.7, marginTop: 10 }}>
-Counts completed runs (stop events / rows with duration) from pump events table.
-</div>
+    <div className="muted2" style={{ fontSize: 12, marginTop: 10 }}>
+      Counts completed runs (stop events / rows with duration) from pump events table.
+    </div>
+  </div>
 </div>
 );
 }
@@ -249,88 +232,69 @@ return snapshot.runsLast7Days.slice(-7);
 }, [snapshot]);
 
 return (
-<div style={{ padding: 20, maxWidth: 1200, margin: "0 auto" }}>
-<div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
-<div>
-<h2 style={{ margin: 0 }}>Device Snapshot</h2>
-<div style={{ opacity: 0.75, marginTop: 6 }}>
-Device: <b>{deviceId}</b>
-</div>
-</div>
+<div className="page">
+  <div className="pageHeader">
+    <div>
+      <h2 className="pageTitle">Device Snapshot</h2>
+      <div className="pageSub">Device: <b>{deviceId}</b></div>
+    </div>
 
-<button
-onClick={load}
-style={{
-borderRadius: 10,
-padding: "10px 12px",
-border: "1px solid rgba(255,255,255,0.18)",
-background: "transparent",
-color: "inherit",
-cursor: "pointer",
-}}
-disabled={loading}
-title="Refetch snapshot"
->
-{loading ? "Loading..." : "Refresh"}
-</button>
-</div>
-
-<div style={{ height: 16 }} />
+    <button
+      onClick={load}
+      className="btn btnPrimary"
+      disabled={loading}
+      title="Refetch snapshot"
+    >
+      {loading ? "Loading..." : "Refresh"}
+    </button>
+  </div>
 
 {loading ? (
-<div style={{ opacity: 0.8 }}>Loading snapshot…</div>
+  <div className="muted">Loading snapshot…</div>
 ) : error ? (
-<div style={{ padding: 14, borderRadius: 12, border: "1px solid rgba(255,0,0,0.35)" }}>
-<div style={{ fontWeight: 700, marginBottom: 6 }}>Error</div>
-<div style={{ opacity: 0.85 }}>{error}</div>
-</div>
+  <div className="inlineError">
+    <div style={{ fontWeight: 900, marginBottom: 6 }}>Error</div>
+    <div className="muted">{error}</div>
+  </div>
 ) : !snapshot ? (
-<div style={{ opacity: 0.8 }}>No data.</div>
+  <div className="muted">No data.</div>
 ) : (
 <>
-<div style={{ display: "grid", gridTemplateColumns: "repeat(12, 1fr)", gap: 12 }}>
-<div style={{ gridColumn: "span 4" }}>
-<StatCard
-title="Monthly pump runs"
-value={snapshot.monthlyPumpRuns}
-sub={snapshot.windowDefinition?.monthly ?? "Last 30 days"}
-/>
-</div>
+  <div className="statsGrid">
+    <StatCard
+      title="Monthly pump runs"
+      value={snapshot.monthlyPumpRuns}
+      sub={snapshot.windowDefinition?.monthly ?? "Last 30 days"}
+    />
 
-<div style={{ gridColumn: "span 4" }}>
-<StatCard
-title="Daily pump runs"
-value={snapshot.dailyPumpRuns}
-sub={snapshot.windowDefinition?.daily ?? "Last 24 hours"}
-/>
-</div>
+    <StatCard
+      title="Daily pump runs"
+      value={snapshot.dailyPumpRuns}
+      sub={snapshot.windowDefinition?.daily ?? "Last 24 hours"}
+    />
 
-<div style={{ gridColumn: "span 4" }}>
-<StatCard
-title="Average run duration"
-value={formatDuration(snapshot.averageRunDurationSeconds)}
-sub="Average of completed runs in monthly window"
-/>
-</div>
+    <StatCard
+      title="Average run duration"
+      value={formatDuration(snapshot.averageRunDurationSeconds)}
+      sub="Average of completed runs in monthly window"
+    />
 
-<div style={{ gridColumn: "span 6" }}>
-<StatCard
-title="Last run timestamp"
-value={formatDateTime(snapshot.lastRunTimestamp)}
-sub="Most recent completed run"
-/>
-</div>
+    <StatCard
+      title="Last run timestamp"
+      value={formatDateTime(snapshot.lastRunTimestamp)}
+      sub="Most recent completed run"
+      className="statCardWide"
+    />
 
-<div style={{ gridColumn: "span 6" }}>
-<StatCard
-title="Last run duration"
-value={formatDuration(snapshot.lastRunDurationSeconds)}
-sub="Duration of most recent completed run"
-/>
-</div>
-</div>
+    <StatCard
+      title="Last run duration"
+      value={formatDuration(snapshot.lastRunDurationSeconds)}
+      sub="Duration of most recent completed run"
+      className="statCardWide"
+    />
+  </div>
 
-<div style={{ height: 12 }} />
+  <div style={{ height: 12 }} />
 
 <RunsPerDayBarChart data={weeklyData} />
 </>

@@ -121,21 +121,14 @@ export default function DeviceEventsPage(props: { deviceId: string }) {
   }, [data]);
 
   return (
-    <div style={{ padding: 20, maxWidth: 900, margin: "0 auto" }}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "baseline",
-          gap: 12,
-        }}
-      >
+    <div className="page page--narrow">
+      <div className="pageHeader">
         <div>
-          <h2 style={{ margin: 0 }}>Events</h2>
-          <div style={{ opacity: 0.75, marginTop: 6 }}>
+          <h2 className="pageTitle">Events</h2>
+          <div className="pageSub">
             Device: <b>{deviceId}</b>
           </div>
-          <div style={{ opacity: 0.65, marginTop: 4, fontSize: 12 }}>
+          <div className="muted2" style={{ marginTop: 6, fontSize: 12 }}>
             Past 7 days • runs ≥ 60 seconds
           </div>
         </div>
@@ -143,14 +136,7 @@ export default function DeviceEventsPage(props: { deviceId: string }) {
         <button
           onClick={load}
           disabled={loading || !session}
-          style={{
-            borderRadius: 10,
-            padding: "10px 12px",
-            border: "1px solid rgba(255,255,255,0.18)",
-            background: "transparent",
-            color: "inherit",
-            cursor: "pointer",
-          }}
+          className="btn btnPrimary"
         >
           {loading ? "Loading..." : "Refresh"}
         </button>
@@ -159,40 +145,24 @@ export default function DeviceEventsPage(props: { deviceId: string }) {
       <div style={{ height: 14 }} />
 
       {error ? (
-        <div
-          style={{
-            padding: 14,
-            borderRadius: 12,
-            border: "1px solid rgba(255,0,0,0.35)",
-          }}
-        >
-          <div style={{ fontWeight: 700, marginBottom: 6 }}>Error</div>
-          <div style={{ opacity: 0.85 }}>{error}</div>
+        <div className="inlineError">
+          <div style={{ fontWeight: 800, marginBottom: 6 }}>Error</div>
+          <div className="muted">{error}</div>
         </div>
       ) : null}
 
       <div style={{ height: 10 }} />
 
-      {days.length === 0 && !loading ? (
-        <div style={{ opacity: 0.8 }}>No runs in the past week.</div>
-      ) : null}
+      {days.length === 0 && !loading ? <div className="muted">No runs in the past week.</div> : null}
 
       {days.map((bucket) => {
         const weekday = weekdayLabelLocal(bucket.day);
         return (
-          <div
-            key={bucket.day}
-            style={{
-              border: "1px solid rgba(255,255,255,0.12)",
-              borderRadius: 12,
-              padding: 12,
-              background: "rgba(255,255,255,0.04)",
-              marginBottom: 12,
-            }}
-          >
-            <div style={{ fontWeight: 800 }}>
+          <div key={bucket.day} className="card dayCard">
+            <div className="cardInner">
+            <div style={{ fontWeight: 900 }}>
               {weekday}{" "}
-              <span style={{ opacity: 0.65, fontWeight: 500 }}>
+              <span className="muted" style={{ fontWeight: 600 }}>
                 ({bucket.day})
               </span>
             </div>
@@ -200,33 +170,23 @@ export default function DeviceEventsPage(props: { deviceId: string }) {
             <div style={{ height: 8 }} />
 
             {bucket.events.length === 0 ? (
-              <div style={{ opacity: 0.75, fontSize: 13 }}>No runs.</div>
+              <div className="muted" style={{ fontSize: 13 }}>No runs.</div>
             ) : (
               <div style={{ display: "grid", gap: 8 }}>
                 {bucket.events.map((ev, idx) => (
                   <div
                     key={`${bucket.day}-${ev.startTimestamp}-${idx}`}
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      gap: 12,
-                      borderTop:
-                        idx === 0 ? "none" : "1px solid rgba(255,255,255,0.10)",
-                      paddingTop: idx === 0 ? 0 : 8,
-                    }}
+                    className="eventRow"
                   >
                     {/* Event numbering now corresponds to newest-first order */}
-                    <div style={{ fontWeight: 700 }}>Event {idx + 1}</div>
-                    <div style={{ opacity: 0.85 }}>
-                      {formatDuration(ev.runDurationSeconds)}
-                    </div>
-                    <div style={{ opacity: 0.85 }}>
-                      {formatStartTimeLocal(ev.startTimestamp)}
-                    </div>
+                    <div className="eventIdx">Event {idx + 1}</div>
+                    <div className="muted">{formatDuration(ev.runDurationSeconds)}</div>
+                    <div className="muted">{formatStartTimeLocal(ev.startTimestamp)}</div>
                   </div>
                 ))}
               </div>
             )}
+            </div>
           </div>
         );
       })}
