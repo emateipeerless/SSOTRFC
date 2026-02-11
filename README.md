@@ -1,74 +1,93 @@
-# React + TypeScript + Vite
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+# TurfConnect Web App — v0.1 Specification
 
-Currently, two official plugins are available:
+## 📌 Overview
+This document outlines the **0.1 spec** for the TurfConnect Web Application, describing the UI layout, data flows, and API endpoints involved in the current version.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## React Compiler
+## 🧭 Application Layout
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Sidebar — User Devices
+The sidebar dynamically loads devices for the logged‑in user:
 
-## Expanding the ESLint configuration
+1. Retrieve `UserKey` from the authenticated session.
+2. Query **SSOU2S** to determine which sites the user has access to.
+3. Query **SSOSites** to fetch all devices linked to those sites.
+4. Display the resulting site → device hierarchy.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+---
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+### Top Header Bar
+The header contains:
+- 🚜 **TurfConnect Logo**
+- 🏷️ **Website version number**
+- 🌗 **Dark / Light mode toggle**
+- 👤 **Logged‑in user’s name**
+- 🔓 **Logout button**
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+---
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## Per‑Device Navigation
+Each device view contains the following pages:
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### 1. Overview Page
+- Displays **daily** and **monthly run counts**
+- Includes **timestamps** and **durations** of each run
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+### 2. Trends Page
+- Graph RMS and Analog (AN / Amp) data
+- Compare data streams to visualize relationships
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
-# SSOTRFC
+### 3. Events Page
+- Timeline view of device events
+- Shows **event start**, **end**, and **duration**
+
+### 4. Settings Page
+- Backend device metadata such as:
+  - Firmware/code version
+  - Device description
+
+---
+
+## 🔌 API Endpoints Used So Far
+Below is the current API usage mapped to their Lambda handlers:
+
+### Devices
+| Endpoint | Purpose | Lambda |
+|---------|---------|--------|
+| `GET /devices` | Fetch user devices using their `UserKey` | `SSOgetUserDevices` |
+| `GET /devices/{deviceId}/snapshot` | Data for the Overview page | `SSOdeviceSnap` |
+| `GET /devices/{deviceId}/Events` | Event data for Events page | `SSOeventTable` |
+| `GET /devices/{deviceId}/settings` | Backend info for Settings page | `SSOsettingsGrab` |
+| `GET /devices/{deviceId}/rms` | RMS trend data (`from`, `to` params) | `SSOrmsTrends` |
+| `GET /devices/{deviceId}/analog` | Analog/Amp trend data | `SSOmaTrends` |
+
+### User Sync
+| Endpoint | Purpose | Lambda |
+|---------|---------|--------|
+| `POST /me/sync` | Syncs SSO user database, saves name + recent login | `SSOSyncUsers` |
+
+### Sites
+| Endpoint | Purpose | Lambda |
+|---------|---------|--------|
+| `GET /sites` | Gets user’s sites using `UserKey` from **SSOU2S** | `SSOgetUserSites` |
+
+---
+
+## 🏭 Current Site & Device Setup
+### Active Sites
+- **INDY-01**
+  - Devices:
+    - `TRFCPCB`
+    - `TRFC2`
+
+### Prototype Device
+- **`PROTO`** → Sending data to the RMS table
+
+---
+
+## 🔧 Next Steps
+- Begin formalizing the **deviceID schema** for all devices.
+- Ensure consistent IDs across device firmware, database tables, and web queries.
+
