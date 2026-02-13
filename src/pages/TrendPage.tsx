@@ -1,5 +1,4 @@
 // src/pages/DeviceTrendsPage.tsx
-// DROP-IN replacement with theme-reactive Plotly charts.
 
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../auth/AuthContext";
@@ -11,13 +10,13 @@ import Plot from "react-plotly.js";
  * ============================ */
 export interface RmsRow {
   deviceId: string;
-  timestamp: string;
+  timestamp: string;   // keep raw string from API
   rms: number;
 }
 
 export interface AnalogRow {
   deviceId: string;
-  timestamp: string;
+  timestamp: string;   // keep raw string from API
   an1: number;
   an2: number;
   an3: number;
@@ -32,30 +31,68 @@ type DateRangePreset = "24h" | "7d" | "30d" | "custom";
 const API_BASE_URL = import.meta.env.VITE_API_BASE;
 
 /* ============================
- * Helpers
+ * Helpers - LOCAL TIME
  * ============================ */
-function iso(dt: Date) {
-  return new Date(dt.getTime() - dt.getMilliseconds())
-    .toISOString()
-    .replace(".000Z", "Z");
+
+/** Zero-pad helper */
+const pad = (n: number, w = 2) => n.toString().padStart(w, "0");
+
+/**
+ * Format a Date as local ISO-8601 with offset, no milliseconds.
+ * Example: 2026-02-13T14:05:00-05:00
+ */
+function isoLocal(dt: Date) {
+  const y = dt.getFullYear();
+  const m = pad(dt.getMonth() + 1);
+  const d = pad(dt.getDate());
+  const hh = pad(dt.getHours());
+  const mm = pad(dt.getMinutes());
+  const ss = pad(dt.getSeconds());
+
+  const tzMin = -dt.getTimezoneOffset(); // e.g., -300 for -05:00
+  const sign = tzMin >= 0 ? "+" : "-";
+  const abs = Math.abs(tzMin);
+  const tzh = pad(Math.floor(abs / 60));
+  const tzm = pad(abs % 60);
+
+  return `${y}-${m}-${d}T${hh}:${mm}:${ss}${sign}${tzh}:${tzm}`;
 }
 
+/** Subtract hours from a Date (preserves local time semantics) */
 function subtract(now: Date, hours: number) {
   return new Date(now.getTime() - hours * 3600 * 1000);
 }
 
+/**
+ * Parse user-entered ISO-ish string safely:
+ * - If it includes an offset or 'Z', Date can parse it.
+ * - If it is naive (no offset), interpret as *local time* by appending the local offset.
+ */
 function parseIsoSafe(s: string) {
-  const d = new Date(s);
+  if (!s) return null;
+
+  const hasOffset = /[zZ]|[+\-]\d{2}:\d{2}$/.test(s);
+  const candidate = hasOffset ? s : `${s}${localTzOffsetSuffix(new Date())}`;
+
+  const d = new Date(candidate);
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
+/** Build the current device's offset suffix, e.g., "-05:00" */
+function localTzOffsetSuffix(reference: Date) {
+  const tzMin = -reference.getTimezoneOffset();
+  const sign = tzMin >= 0 ? "+" : "-";
+  const abs = Math.abs(tzMin);
+  const tzh = pad(Math.floor(abs / 60));
+  const tzm = pad(abs % 60);
+  return `${sign}${tzh}:${tzm}`;
+}
+
 /* ============================
- * API calls
+ * API calls (unchanged)
  * ============================ */
 async function fetchJsonWithAuth(url: string, session: any): Promise<any> {
-  if (!API_BASE_URL)
-    throw new Error("Missing API base URL.");
-
+  if (!API_BASE_URL) throw new Error("Missing API base URL.");
   if (!session) throw new Error("No session available.");
 
   const token = await getBearerToken(session);
@@ -79,9 +116,9 @@ async function fetchRmsSeries(
   toIso: string,
   session: any
 ): Promise<RmsRow[]> {
-  const url = `${API_BASE_URL}/devices/PROTO/rms?from=${encodeURIComponent(
-    fromIso
-  )}&to=${encodeURIComponent(toIso)}`;
+  const url = `${API_BASE_URL}/devices/${encodeURIComponent(
+    deviceId
+  )}/rms?from=${encodeURIComponent(fromIso)}&to=${encodeURIComponent(toIso)}`;
 
   const data = await fetchJsonWithAuth(url, session);
   const items = Array.isArray(data) ? data : data?.items ?? [];
@@ -99,9 +136,9 @@ async function fetchAnalogSeries(
   toIso: string,
   session: any
 ): Promise<AnalogRow[]> {
-  const url = `${API_BASE_URL}/devices/TRFCPCB2/analog?from=${encodeURIComponent(
-    fromIso
-  )}&to=${encodeURIComponent(toIso)}`;
+  const url = `${API_BASE_URL}/devices/${encodeURIComponent(
+    deviceId
+  )}/analog?from=${encodeURIComponent(fromIso)}&to=${encodeURIComponent(toIso)}`;
 
   const data = await fetchJsonWithAuth(url, session);
   const items = Array.isArray(data) ? data : data?.items ?? [];
@@ -117,7 +154,7 @@ async function fetchAnalogSeries(
 }
 
 /* ============================
- * CSS variable helper
+ * CSS variable helper (unchanged)
  * ============================ */
 const css = (v: string) =>
   getComputedStyle(document.documentElement).getPropertyValue(v).trim();
@@ -185,15 +222,16 @@ export default function DeviceTrendsPage(props: { deviceId: string }) {
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
 
+  // Build query window in *local* time, with local offset
   const { fromIso, toIso } = useMemo(() => {
     const now = new Date();
 
-    if (preset === "24h") return { fromIso: iso(subtract(now, 24)), toIso: iso(now) };
-    if (preset === "7d") return { fromIso: iso(subtract(now, 24 * 7)), toIso: iso(now) };
-    if (preset === "30d") return { fromIso: iso(subtract(now, 24 * 30)), toIso: iso(now) };
+    if (preset === "24h") return { fromIso: isoLocal(subtract(now, 24)), toIso: isoLocal(now) };
+    if (preset === "7d")  return { fromIso: isoLocal(subtract(now, 24 * 7)), toIso: isoLocal(now) };
+    if (preset === "30d") return { fromIso: isoLocal(subtract(now, 24 * 30)), toIso: isoLocal(now) };
 
-    const f = parseIsoSafe(customFrom) ? customFrom : iso(subtract(now, 24 * 7));
-    const t = parseIsoSafe(customTo) ? customTo : iso(now);
+    const f = parseIsoSafe(customFrom) ? customFrom : isoLocal(subtract(now, 24 * 7));
+    const t = parseIsoSafe(customTo) ? customTo : isoLocal(now);
 
     return { fromIso: f, toIso: t };
   }, [preset, customFrom, customTo]);
@@ -215,6 +253,7 @@ export default function DeviceTrendsPage(props: { deviceId: string }) {
         fetchAnalogSeries(deviceId, fromIso, toIso, session),
       ]);
 
+      // Sort by timestamp string; ISO with offsets is lexically sortable
       rms.sort((a, b) => (a.timestamp < b.timestamp ? -1 : 1));
       analog.sort((a, b) => (a.timestamp < b.timestamp ? -1 : 1));
 
@@ -235,49 +274,25 @@ export default function DeviceTrendsPage(props: { deviceId: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, deviceId, fromIso, toIso]);
 
-  /* ----- Traces ----- */
+  /* ----- Traces (send Date objects so Plotly uses local time) ----- */
   const rmsTrace = useMemo(() => {
     return {
       type: "scatter" as const,
       mode: "lines" as const,
       name: "RMS",
-      x: rmsRows.map((r) => r.timestamp),
+      x: rmsRows.map((r) => new Date(r.timestamp)),   // <— Date objects
       y: rmsRows.map((r) => r.rms),
-      hovertemplate: "%{x}<br>RMS: %{y}<extra></extra>",
+      hovertemplate: "%{x|%Y-%m-%d %H:%M:%S}<br>RMS: %{y}<extra></extra>",
     };
   }, [rmsRows]);
 
   const analogTraces = useMemo(() => {
-    const x = analogRows.map((r) => r.timestamp);
+    const x = analogRows.map((r) => new Date(r.timestamp)); // <— Date objects
     return [
-      {
-        type: "scatter" as const,
-        mode: "lines",
-        name: "AN1",
-        x,
-        y: analogRows.map((r) => r.an1),
-      },
-      {
-        type: "scatter",
-        mode: "lines",
-        name: "AN2",
-        x,
-        y: analogRows.map((r) => r.an2),
-      },
-      {
-        type: "scatter",
-        mode: "lines",
-        name: "AN3",
-        x,
-        y: analogRows.map((r) => r.an3),
-      },
-      {
-        type: "scatter",
-        mode: "lines",
-        name: "AN4",
-        x,
-        y: analogRows.map((r) => r.an4),
-      },
+      { type: "scatter" as const, mode: "lines", name: "AN1", x, y: analogRows.map((r) => r.an1) },
+      { type: "scatter",           mode: "lines", name: "AN2", x, y: analogRows.map((r) => r.an2) },
+      { type: "scatter",           mode: "lines", name: "AN3", x, y: analogRows.map((r) => r.an3) },
+      { type: "scatter",           mode: "lines", name: "AN4", x, y: analogRows.map((r) => r.an4) },
     ];
   }, [analogRows]);
 
@@ -321,31 +336,31 @@ export default function DeviceTrendsPage(props: { deviceId: string }) {
         {preset === "custom" && (
           <>
             <label>
-              From (ISO):&nbsp;
+              From (Local ISO):&nbsp;
               <input
                 value={customFrom}
                 onChange={(e) => setCustomFrom(e.target.value)}
-                placeholder="2026-02-01T00:00:00Z"
+                placeholder="2026-02-01T00:00:00-05:00"
                 className="input"
-                style={{ width: 220 }}
+                style={{ width: 240 }}
               />
             </label>
 
             <label>
-              To (ISO):&nbsp;
+              To (Local ISO):&nbsp;
               <input
                 value={customTo}
                 onChange={(e) => setCustomTo(e.target.value)}
-                placeholder="2026-02-09T23:59:59Z"
+                placeholder="2026-02-09T23:59:59-05:00"
                 className="input"
-                style={{ width: 220 }}
+                style={{ width: 240 }}
               />
             </label>
           </>
         )}
 
         <div className="muted2" style={{ fontSize: 12 }}>
-          Query: <span>{fromIso}</span> → <span>{toIso}</span>
+          Query:&nbsp;<span>{fromIso}</span>&nbsp;→&nbsp;<span>{toIso}</span>
         </div>
       </div>
 
@@ -375,7 +390,12 @@ export default function DeviceTrendsPage(props: { deviceId: string }) {
               autosize: true,
               height: 420,
               margin: { l: 55, r: 20, t: 10, b: 45 },
-              xaxis: { title: { text: "Time" }, type: "date" },
+              xaxis: {
+                title: { text: "Time" },
+                type: "date",
+                // Show local time on hover/ticks
+                hoverformat: "%Y-%m-%d %H:%M:%S",
+              },
               yaxis: { title: { text: "Value" } },
               legend: { orientation: "h" },
             })}
@@ -405,7 +425,11 @@ export default function DeviceTrendsPage(props: { deviceId: string }) {
                   autosize: true,
                   height: 360,
                   margin: { l: 55, r: 20, t: 10, b: 45 },
-                  xaxis: { title: { text: "Time" }, type: "date" },
+                  xaxis: {
+                    title: { text: "Time" },
+                    type: "date",
+                    hoverformat: "%Y-%m-%d %H:%M:%S",
+                  },
                   yaxis: { title: { text: "RMS" } },
                   legend: { orientation: "h" },
                 })}
